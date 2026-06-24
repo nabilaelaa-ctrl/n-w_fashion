@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum OrderStatus {
+  MENUNGGU
+  DIPROSES
+  DIKIRIM
+  SELESAI
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  password      String?
+  image         String? 
+  address       String?   @db.Text
+  savedAddresses Json? 
+  role          Role      @default(USER)
+  isSuspended   Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+
+  orders        Order[]
+  reviews       Review[]
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+}
+
+model Product {
+  id          String      @id @default(uuid())
+  name        String
+  category    String      @default("pakaian")
+  categoryId  String?
+  categoryRel Category?   @relation(fields: [categoryId], references: [id])
+  description String      @db.Text
+  price       Int
+  originalPrice Int?      
+  images      Json?       
+  stock       Int
+  colors      String      @default("Hitam,Putih") 
+  sizes       String      @default("S,M,L")       
+  sizeChart   String?     @db.Text
+  reviews     Review[]
+  orderItems  OrderItem[]
+  createdAt   DateTime    @default(now())
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Int
+  color     String  @default("-")
+  size      String  @default("-")
+  
+  reviews   Review[]
+}
+  
+
+model Order {
+  id            String      @id @default(uuid())
+  userId        String
+  user          User        @relation(fields:[userId], references: [id])
+  receiverName  String
+  total         Int
+  address       String      @db.Text
+  phone         String
+  paymentMethod String      @default("TRANSFER_BANK")
+  paymentProof  String?
+  // PERBAIKAN: Hilangkan tanda kutip pada MENUNGGU
+  status        OrderStatus @default(MENUNGGU)
+  orderItems    OrderItem[]
+  createdAt     DateTime    @default(now())
+}
+
+model Banner {
+  id        String   @id @default(cuid())
+  title     String?
+  imageUrl  String
+  link      String?
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Store {
+  id            String   @id @default(cuid())
+  name          String?  @default("TokoBaju")
+  logo          String?
+  address       String?  @db.Text
+  whatsapp      String?
+  bankAccounts  Json?
+  shippingCost  Int      @default(0)
+  updatedAt     DateTime @updatedAt
+}
+
+model Review {
+  id            String    @id @default(uuid())
+  rating        Int
+  comment       String?   @db.Text
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  productId     String
+  product       Product   @relation(fields: [productId], references: [id])
+  orderItemId   String    @unique
+  orderItem     OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  adminReply    String?
+  adminRepliedAt DateTime?
+  createdAt     DateTime  @default(now())
+}
+
+model SiteConfig {
+  id            String   @id @default("config")
+  bankName      String?
+  bankAccount   String?
+  bankHolder    String?
+  ewalletName   String?
+  ewalletNumber String?
+  updatedAt     DateTime @updatedAt
+}
+
+model BankAccount {
+  id            String   @id @default(uuid())
+  bankName      String
+  accountName   String
+  accountNumber String
+  type          String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
